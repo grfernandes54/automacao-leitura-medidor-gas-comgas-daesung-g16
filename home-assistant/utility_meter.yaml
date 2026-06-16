@@ -1,0 +1,31 @@
+# ============================================================================
+#  Utility Meter — Home Assistant
+#
+#  POR QUE ISSO É NECESSÁRIO?
+#  O "Volume Gás" do pulse_counter vive na RAM do ESP32 e ZERA a cada reboot
+#  (queda de energia, OTA, etc.). O utility_meter do Home Assistant guarda o
+#  acumulado de forma persistente e gera os ciclos diário/mensal usados no
+#  Energy dashboard.
+#
+#  COMO USAR:
+#  1. Cole o bloco abaixo no seu configuration.yaml (ou em pacote incluído).
+#  2. Confirme que a entidade-fonte bate com a do seu ESPHome.
+#     Por padrão: sensor.medidor_de_gas_volume_gas
+#     (Configurações → Dispositivos → Medidor de Gás, veja o nome exato).
+#  3. Reinicie o Home Assistant.
+#  4. Configurações → Painéis → Energia → "Consumo de gás" e adicione o
+#     sensor mensal (sensor.consumo_de_gas_mensal).
+#
+#  Também dá para criar pela interface gráfica (Ajudantes → Medidor de consumo).
+# ============================================================================
+
+utility_meter:
+  consumo_gas_diario:
+    source: sensor.medidor_de_gas_volume_gas
+    name: "Consumo de Gás Diário"
+    cycle: daily
+
+  consumo_gas_mensal:
+    source: sensor.medidor_de_gas_volume_gas
+    name: "Consumo de Gás Mensal"
+    cycle: monthly

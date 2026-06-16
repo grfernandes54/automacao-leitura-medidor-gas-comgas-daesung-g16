@@ -1,0 +1,109 @@
+# ============================================================================
+#  ESP32 DEDICADO — Medidor de gás Daesung/DAEFLEX G1.6 (COMGÁS)
+#  Sensor: Reed Switch DAEFLEX (contato seco) → 1 pulso = 10 L = 0,01 m³
+#
+#  Crie um secrets.yaml a partir de secrets.yaml.example.
+#  Primeira gravação por USB (OTA só funciona com firmware já presente).
+# ============================================================================
+
+substitutions:
+  device_name: medidor-gas
+  friendly_name: Medidor de Gás
+
+esphome:
+  name: ${device_name}
+  friendly_name: ${friendly_name}
+  comment: "Daesung G1.6 COMGÁS — Reed switch 10 L/pulso"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+    advanced:
+      minimum_chip_revision: "3.1"   # remova se o seu ESP for rev < 3.0
+      sram1_as_iram: true
+
+logger:
+  level: INFO
+
+api:
+  encryption:
+    key: !secret api_key             # use uma chave EXCLUSIVA deste device
+
+ota:
+  - platform: esphome
+    password: !secret ota_password
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  ap:
+    ssid: "Medidor-Gas Setup"
+    password: !secret ap_password
+
+captive_portal:
+
+sensor:
+
+  - platform: pulse_counter
+    name: "Vazão Gás"
+    id: vazao_gas
+    pin:
+      number: GPIO27                 # GPIO livre p/ o reed
+      mode:
+        input: true
+        pullup: true                 # reed = contato seco → pull-up interno
+    count_mode:
+      rising_edge: DISABLE
+      falling_edge: INCREMENT        # repouso=HIGH, contato fechado=LOW
+    # reed é contato MECÂNICO: desligar PCNT (filtro PCNT máx. 13µs é curto demais)
+    use_pcnt: false                  # conta por interrupção → permite filtro grande
+    internal_filter: 100ms           # debounce do reed (bounce mecânico em ms)
+    update_interval: 30s
+    unit_of_measurement: "m³/h"
+    device_class: volume_flow_rate
+    state_class: measurement
+    icon: mdi:fire
+    accuracy_decimals: 3
+    filters:
+      - multiply: 0.6                # pulsos/min → m³/h (1 pulso = 0,01 m³ × 60)
+    total:
+      name: "Volume Gás"
+      id: volume_gas
+      unit_of_measurement: "m³"
+      device_class: gas
+      state_class: total_increasing
+      icon: mdi:meter-gas
+      accuracy_decimals: 2
+      filters:
+        - multiply: 0.01             # 1 pulso = 0,01 m³ = 10 L
+        # - offset: 1634.27          # descomente p/ refletir a leitura do medidor
+
+  - platform: wifi_signal
+    name: "Sinal Wi-Fi Gás"
+    update_interval: 60s
+    entity_category: diagnostic
+
+  - platform: uptime
+    name: "Uptime Gás"
+    update_interval: 60s
+    entity_category: diagnostic
+
+binary_sensor:
+  - platform: status
+    name: "Status Gás"
+    entity_category: diagnostic
+
+button:
+  - platform: restart
+    name: "Reiniciar Gás"
+    entity_category: config
+
+text_sensor:
+  - platform: version
+    name: "Versão ESPHome Gás"
+    entity_category: diagnostic
+  - platform: wifi_info
+    ip_address:
+      name: "IP Gás"
+      entity_category: diagnostic
